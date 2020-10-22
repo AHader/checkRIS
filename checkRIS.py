@@ -33,6 +33,10 @@ def isCovidLV(content):
     m = re.search('\\d+(?=\\..COVID-19-LV-Novelle)', content)
     return m
 
+def isCovidMV(content):
+    m = re.search('\\d+(?=\\..COVID-19-MV-Novelle)', content)
+    return m
+
 def exists(content):
     m = re.search('(?<=Das Dokument).+(?=ist im RIS-Datenbestand nicht enthalten)', content)
     return m == None
@@ -62,12 +66,12 @@ def postSlack(channels, text, blocks):
             'blocks': json.dumps(blocks) if blocks else None
         }).json()
 
-def createLinks(id, num):
+def createLinks(id, num, kind):
     return [{
 			"type": "header",
 			"text": {
 				"type": "plain_text",
-				"text": ":mega: Neue Covid-19-LV-Novelle wurde im RIS veröffentlicht",
+				"text": ":mega: Neue Covid-19-%s-Novelle wurde im RIS veröffentlicht" % (kind),
 				"emoji": True
 			}
 		},
@@ -75,23 +79,30 @@ def createLinks(id, num):
             "type": "section",
             "text": {  
                 "type": "mrkdwn",
-                "text": "Änderungen der <%s|*%s.* COVID-19-LV-Novelle>" % ("https://www.ris.bka.gv.at/Dokumente/BgblAuth/BGBLA_2020_II_%s/BGBLA_2020_II_%s.html" % (id, id), num)
+                "text": "Änderungen der <%s|*%s.* COVID-19-%s-Novelle>" % ("https://www.ris.bka.gv.at/Dokumente/BgblAuth/BGBLA_2020_II_%s/BGBLA_2020_II_%s.html" % (id, id), num, kind)
             }
         },
         {  
             "type": "section",
             "text": {  
                "type": "mrkdwn",
-               "text": "Aktuell gültige, konsolidierte <https://www.ris.bka.gv.at/GeltendeFassung.wxe?Abfrage=Bundesnormen&Gesetzesnummer=20011162|Covid-19-Lockerungsverordnung>"
+               "text": "Aktuell gültige, konsolidierte <https://www.ris.bka.gv.at/GeltendeFassung.wxe?Abfrage=Bundesnormen&Gesetzesnummer=20011162|Covid-19-%s>" % (kind)
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+               "type": "mrkdwn",
+               "text": "Aktuell gültiges, konsolidiertes <https://www.ris.bka.gv.at/GeltendeFassung.wxe?Abfrage=Bundesnormen&Gesetzesnummer=20011073|Covid-19-MG>"
             }
         }]
 
-id = 300
+id = 445
 
 if (checkIfSettingsExist()):
     id = int(open(SETTINGS).read(-1))
 else:
-    id = 340
+    id = 445
 
 while True:
     print ("%s checking %s" % (datetime.datetime.now().strftime("%d.%b %Y %H:%M:%S"), id))
@@ -100,7 +111,11 @@ while True:
         break
     m = isCovidLV(content)
     if (m):
-        postSlack([slack_channelA, slack_channelB], "Neue Covid-19-LV-Novelle wurde im RIS veröffentlicht", createLinks(id, m.group(0)))
+        postSlack([slack_channelA, slack_channelB], "Neue Covid-19-LV-Novelle wurde im RIS veröffentlicht", createLinks(id, m.group(0), "LV"))
         sendEmail("%s. COVID-19-LV-Novelle: %s" % (m.group(0), "https://www.ris.bka.gv.at/Dokumente/BgblAuth/BGBLA_2020_II_%s/BGBLA_2020_II_%s.html" % (id, id)))
+    m = isCovidMV(content)
+    if (m):
+        postSlack([slack_channelA, slack_channelB], "Neue Covid-19-MV-Novelle wurde im RIS veröffentlicht", createLinks(id, m.group(0), "MV"))
+        sendEmail("%s. COVID-19-MV-Novelle: %s" % (m.group(0), "https://www.ris.bka.gv.at/Dokumente/BgblAuth/BGBLA_2020_II_%s/BGBLA_2020_II_%s.html" % (id, id)))
     id = id + 1
 open(SETTINGS, "w").write("%s" % (id))
